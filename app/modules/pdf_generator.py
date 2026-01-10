@@ -1,0 +1,160 @@
+"""
+PDF Generation Module
+
+This module provides functionality to generate PDF documents from various sources.
+"""
+import os
+import logging
+from typing import Any, Dict, Optional, Union
+from fpdf import FPDF
+
+logger = logging.getLogger(__name__)
+
+class PDFGenerator:
+    """
+    A class to handle PDF generation with various formatting options.
+    
+    This implementation uses the fpdf2 library for PDF generation.
+    """
+    
+    def __init__(self, orientation: str = 'P', unit: str = 'mm', format: str = 'A4'):
+        """
+        Initialize the PDF generator.
+        
+        Args:
+            orientation (str): Page orientation ('P' for portrait, 'L' for landscape)
+            unit (str): Unit of measurement ('mm', 'cm', 'in')
+            format (str): Page format ('A3', 'A4', 'Letter', etc.)
+        """
+        self.orientation = orientation
+        self.unit = unit
+        self.format = format
+        
+    def create_pdf(self, content: Union[str, Dict[str, Any]], output_path: str) -> str:
+        """
+        Create a PDF file with the given content.
+        
+        Args:
+            content: Either a string of text or a dictionary with structured content
+            output_path: Path where the PDF will be saved
+            
+        Returns:
+            str: Path to the generated PDF file
+        """
+        try:
+            pdf = FPDF(orientation=self.orientation, unit=self.unit, format=self.format)
+            pdf.add_page()
+            
+            # Set default font
+            pdf.set_font("Arial", size=12)
+            
+            if isinstance(content, dict):
+                self._add_structured_content(pdf, content)
+            else:
+                # Simple text content
+                pdf.multi_cell(0, 10, str(content))
+            
+            # Ensure output directory exists
+            os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+            
+            # Save the PDF
+            pdf.output(output_path)
+            logger.info(f"PDF generated successfully at {output_path}")
+            return output_path
+            
+        except Exception as e:
+            logger.error(f"Error generating PDF: {str(e)}", exc_info=True)
+            raise
+    
+    def _add_structured_content(self, pdf: FPDF, content: Dict[str, Any]) -> None:
+        """
+        Add structured content to the PDF.
+        
+        Args:
+            pdf: FPDF instance
+            content: Dictionary containing structured content
+        """
+        # Add title if present
+        if 'title' in content:
+            pdf.set_font("Arial", 'B', 16)
+            pdf.cell(0, 10, str(content['title']), ln=True, align='C')
+            pdf.ln(10)
+        
+        # Reset font for content
+        pdf.set_font("Arial", size=12)
+        
+        # Add text content
+        if 'sections' in content and isinstance(content['sections'], list):
+            for section in content['sections']:
+                if 'heading' in section:
+                    pdf.set_font("", 'B', 14)
+                    pdf.cell(0, 10, str(section['heading']), ln=True)
+                    pdf.set_font("", size=12)
+                
+                if 'text' in section:
+                    pdf.multi_cell(0, 10, str(section['text']))
+                
+                pdf.ln(5)
+        
+        # Add table if present
+        if 'table' in content and isinstance(content['table'], dict):
+            self._add_table(pdf, content['table'])
+    
+    def _add_table(self, pdf: FPDF, table_data: Dict[str, Any]) -> None:
+        """
+        Add a table to the PDF.
+        
+        Args:
+            pdf: FPDF instance
+            table_data: Dictionary containing table data
+        """
+        if 'headers' not in table_data or 'rows' not in table_data:
+            return
+            
+        col_widths = table_data.get('col_widths', [])
+        if not col_widths:
+            # Default equal column widths
+            col_widths = [pdf.w / len(table_data['headers'])] * len(table_data['headers'])
+        
+        # Table headers
+        pdf.set_font("", 'B')
+        for i, header in enumerate(table_data['headers']):
+            pdf.cell(col_widths[i], 10, str(header), border=1)
+        pdf.ln()
+        
+        # Table rows
+        pdf.set_font("")
+        for row in table_data['rows']:
+            for i, cell in enumerate(row):
+                pdf.cell(col_widths[i], 10, str(cell), border=1)
+            pdf.ln()
+
+# Example usage
+if __name__ == "__main__":
+    # Example with simple text
+    generator = PDFGenerator()
+    generator.create_pdf("Hello, this is a test PDF.", "test_simple.pdf")
+    
+    # Example with structured content
+    structured_content = {
+        "title": "Sample Report",
+        "sections": [
+            {
+                "heading": "Introduction",
+                "text": "This is a sample report generated by PDFGenerator."
+            },
+            {
+                "heading": "Data Summary",
+                "text": "Below is a summary table of the data."
+            }
+        ],
+        "table": {
+            "headers": ["ID", "Name", "Value"],
+            "rows": [
+                [1, "Item 1", 100],
+                [2, "Item 2", 200],
+                [3, "Item 3", 300]
+            ]
+        }
+    }
+    generator.create_pdf(structured_content, "test_structured.pdf")
