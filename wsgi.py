@@ -1,10 +1,7 @@
 ﻿from app import create_app, db
+from config import Config
 
-app = create_app()
-
-# Import and register routes after app creation to avoid circular imports
-from app.routes import init_app as init_routes
-init_routes(app)
+app = create_app(Config)
 
 if __name__ == "__main__":
     with app.app_context():

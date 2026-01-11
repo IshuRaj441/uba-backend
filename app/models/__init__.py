@@ -1,20 +1,20 @@
 """
 Database models for the Universal Business Automation system.
 """
-from .user import User
-from .lead import Lead, ScrapeJob, ExportJob
 from .document import Document, ConversionJob
+from .lead import Lead, ScrapeJob, ExportJob
+from .user import User
 from .email import Email, EmailTemplate, EmailLog
 from .activity import ActivityLog
 
-# Import all models here to ensure they are registered with SQLAlchemy
+# Export models
 __all__ = [
-    'User',
-    'Lead', 
-    'ScrapeJob', 
-    'ExportJob',
     'Document',
     'ConversionJob',
+    'Lead',
+    'ScrapeJob',
+    'ExportJob',
+    'User',
     'Email',
     'EmailTemplate',
     'EmailLog',

@@ -1,6 +1,6 @@
 ﻿from flask import Blueprint, jsonify, current_app
-from app import db
-from app.models import Lead, Document, ConversionJob
+from .. import db
+from ..models import Lead, Document, ConversionJob
 from datetime import datetime
 import os
 

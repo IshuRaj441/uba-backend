@@ -2,7 +2,7 @@
 Lead and related models for the Universal Business Automation system.
 """
 from datetime import datetime, timezone
-from app import db
+from ..extensions import db
 
 class Lead(db.Model):
     """Lead model for storing potential customer information."""

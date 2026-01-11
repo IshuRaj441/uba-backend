@@ -3,7 +3,7 @@ Activity logging model for the Universal Business Automation system.
 """
 import json
 from datetime import datetime
-from app import db
+from ..extensions import db
 
 class ActivityLog(db.Model):
     """

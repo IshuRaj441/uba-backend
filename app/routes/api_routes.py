@@ -73,11 +73,15 @@ def api_root():
 @api_bp.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
+    from sqlalchemy import text
+    db_status = 'unknown'
+    
     try:
-        # Test database connection
-        db.session.execute('SELECT 1')
+        # Test database connection with a simple query
+        db.session.execute(text('SELECT 1'))
         db_status = 'connected'
     except Exception as e:
+        current_app.logger.error(f"Database connection error: {str(e)}")
         db_status = f'error: {str(e)}'
     
     return jsonify({

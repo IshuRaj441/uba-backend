@@ -3,7 +3,7 @@ Document and conversion models for the Universal Business Automation system.
 """
 import os
 from datetime import datetime, timezone
-from app import db
+from ..extensions import db
 
 class Document(db.Model):
     """Model for storing document information."""

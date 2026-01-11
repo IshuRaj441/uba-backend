@@ -3,7 +3,7 @@ Email models for the Universal Business Automation system.
 """
 import json
 from datetime import datetime, timezone
-from app import db
+from ..extensions import db
 
 class EmailTemplate(db.Model):
     """Model for storing email templates."""
