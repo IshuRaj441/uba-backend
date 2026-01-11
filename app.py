@@ -29,6 +29,12 @@ def create_app():
     
     # Set secret key for session and JWT
     app = Flask(__name__)
+    CORS(app)
+
+# Register blueprints
+app.register_blueprint(auth_bp, url_prefix="/api/auth")
+app.register_blueprint(api_bp, url_prefix="/api")
+
     app.secret_key = JWT_SECRET_KEY
 
     # Ensure directories exist
