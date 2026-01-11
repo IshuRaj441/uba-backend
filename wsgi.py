@@ -1,9 +1,15 @@
-﻿from app import create_app, db
-from config import Config
+﻿import os
+from app import create_app, db
+from config import ProductionConfig
 
-app = create_app(Config)
+# Create application instance
+app = create_app(ProductionConfig)
 
+# Ensure the database tables are created
+with app.app_context():
+    db.create_all()
+
+# This file is used by Gunicorn to serve the application
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
