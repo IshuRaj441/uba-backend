@@ -1,0 +1,24 @@
+[Unit]
+Description=Gunicorn instance to serve UniversalBizAutomat
+After=network.target
+
+[Service]
+User=yourusername
+Group=www-data
+WorkingDirectory=/path/to/UniversalBizAutomat
+Environment="PATH=/path/to/your/venv/bin"
+EnvironmentFile=/path/to/UniversalBizAutomat/.env
+ExecStart=/path/to/your/venv/bin/gunicorn \
+    --workers 4 \
+    --worker-class gthread \
+    --threads 2 \
+    --timeout 300 \
+    --access-logfile /var/log/universalbizautomat/access.log \
+    --error-logfile /var/log/universalbizautomat/error.log \
+    --capture-output \
+    --log-level debug \
+    --bind unix:/path/to/UniversalBizAutomat/universalbizautomat.sock \
+    run:app
+
+[Install]
+WantedBy=multi-user.target
