@@ -1,0 +1,20 @@
+flask
+flask-cors
+gunicorn
+flask-sqlalchemy
+flask-migrate
+python-dotenv
+requests
+python-magic
+python-magic-bin; platform_system=="Windows"
+python-magic; platform_system!="Windows"
+python-docx
+pdf2docx
+python-pptx
+Pillow
+pypandoc
+pytesseract
+pytest
+pytest-cov
+black
+flake8
