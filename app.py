@@ -2,28 +2,87 @@ import os
 import uuid
 import subprocess
 import time
-from datetime import datetime
-from flask import Flask, jsonify, request, send_file, send_from_directory
+from datetime import datetime, timedelta
+from flask import Flask, jsonify, request, send_file, send_from_directory, url_for
 from flask_cors import CORS
+from extensions import db, migrate
+from werkzeug.security import generate_password_hash, check_password_hash
+from routes.auth_routes import auth_bp
+from routes.api_routes import api_bp
 from werkzeug.utils import secure_filename
+from functools import wraps
+import jwt
+
+# Initialize extensions
+db = db
+migrate = migrate
 
 def create_app():
     # Configuration
     UPLOAD_FOLDER = 'uploads'
     OUTPUT_FOLDER = 'outputs'
     ALLOWED_EXTENSIONS = {'pdf', 'docx', 'doc', 'tex', 'jpg', 'jpeg', 'png'}
+    
+    # JWT Configuration
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'dev-key-change-in-production-123')
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=30)
+    
+    # Set secret key for session and JWT
+    app = Flask(__name__)
+    app.secret_key = JWT_SECRET_KEY
 
-    # Ensure upload and output directories exist
+    # Ensure directories exist
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    
+    # Create data directory for database with proper permissions
+    DATA_DIR = os.path.abspath(os.path.join(BASE_DIR, 'data'))
+    os.makedirs(DATA_DIR, exist_ok=True)
+    
+    # Set full permissions on the data directory (Windows)
+    try:
+        import stat
+        os.chmod(DATA_DIR, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+    except Exception as e:
+        print(f"Warning: Could not set permissions on {DATA_DIR}: {e}")
+    
+    # Create other required directories
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
+    # Register blueprints
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(api_bp, url_prefix='/api')
 
     # Get the absolute path to the frontend build directory
     frontend_build_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'build'))
 
     app = Flask(__name__, static_folder=frontend_build_path, static_url_path='')
+    
+    # App config
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
     app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-change-in-production')
+    app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY
+    
+    # Use file-based SQLite database
+    db_path = os.path.join('instance', 'app.db')
+    os.makedirs('instance', exist_ok=True)
+    db_uri = f'sqlite:///{os.path.abspath(db_path)}'
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'connect_args': {
+            'timeout': 30,  # seconds
+            'check_same_thread': False
+        }
+    }
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    
+    print(f"Using SQLite database at: {db_path}")
+    
+    # Initialize extensions
+    db.init_app(app)
+    migrate.init_app(app, db)
 
     # Configure CORS
     CORS(app, 
@@ -33,6 +92,42 @@ def create_app():
         methods=["GET", "HEAD", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"],
         expose_headers=["Content-Disposition"]
     )
+    
+    # Import and register blueprints
+    from routes import api_routes, auth_routes
+    app.register_blueprint(api_routes.api_bp, url_prefix='/api')
+    app.register_blueprint(auth_routes.auth_bp, url_prefix='/api/auth')
+    
+    # Import models
+    from models.user import User
+    
+    # Create database tables
+    with app.app_context():
+        db.create_all()
+        
+        # Create admin user if not exists
+        if not User.query.filter_by(email='admin@example.com').first():
+            admin = User(
+                email='admin@example.com',
+                password=generate_password_hash('admin123'),
+                credits=1000,
+                is_admin=True
+            )
+            db.session.add(admin)
+            db.session.commit()
+        
+        # Create test user if not exists
+        test_email = 'raji53681@gmail.com'
+        if not User.query.filter_by(email=test_email).first():
+            test_user = User(
+                email=test_email,
+                password=generate_password_hash('test123'),  # You can change this password
+                credits=100,
+                is_admin=False
+            )
+            db.session.add(test_user)
+            db.session.commit()
+            print(f"Created test user with email: {test_email}")
 
     # Application start time
     app.start_time = time.time()
@@ -280,12 +375,5 @@ def create_app():
 # For development
 if __name__ == '__main__':
     app = create_app()
-    # Check for required tools
-    system_info = app.get_system_info()
-    missing_tools = [tool for tool, available in system_info.items() if not available]
-    if missing_tools:
-        print(f"Warning: The following required tools are missing: {', '.join(missing_tools)}")
-        print("Some features may not work as expected.")
-    
     # Run the application
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
