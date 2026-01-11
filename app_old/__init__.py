@@ -1,12 +1,11 @@
 ﻿import os
 from flask import Flask, jsonify, request
-from flask import Flask
-from config import Config
+from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_cors import CORS
 from flask_login import LoginManager
 from flask_mail import Mail
+from config import Config
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -15,9 +14,13 @@ login_manager = LoginManager()
 mail = Mail()
 
 def create_app(config_class=Config):
+    """Create and configure the Flask application."""
     app = Flask(__name__)
+    
+    # Load configuration
     app.config.from_object(config_class)
-
+    
+    # Ensure instance and upload folders exist
     os.makedirs(app.instance_path, exist_ok=True)
     os.makedirs(app.config.get('UPLOAD_FOLDER', 'uploads'), exist_ok=True)
     
