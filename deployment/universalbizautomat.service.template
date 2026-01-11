@@ -1,0 +1,47 @@
+[Unit]
+Description=Universal Business Automation Service
+Documentation=https://github.com/yourusername/UniversalBizAutomat
+After=network.target postgresql.service
+
+[Service]
+# Service user and group
+User=universal
+Group=www-data
+
+# Security options
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/log/universalbizautomat
+
+# Working directory and environment
+WorkingDirectory=/opt/universalbizautomat/backend
+EnvironmentFile=/etc/universalbizautomat/.env
+
+# Virtual environment path
+Environment="PATH=/opt/universalbizautomat/venv/bin"
+
+# Gunicorn configuration
+ExecStart=/opt/universalbizautomat/venv/bin/gunicorn \
+    --config /opt/universalbizautomat/backend/gunicorn.conf.py \
+    --pid /run/universalbizautomat/universalbizautomat.pid \
+    app:app
+
+# Process management
+Restart=always
+RestartSec=10
+KillSignal=SIGINT
+TimeoutStopSec=300
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=universalbizautomat
+
+# Create necessary directories
+ExecStartPre=/usr/bin/install -d -m 0755 -o universal -g www-data /var/log/universalbizautomat
+ExecStartPre=/usr/bin/install -d -m 0755 -o universal -g www-data /run/universalbizautomat
+
+[Install]
+WantedBy=multi-user.target
